@@ -1,0 +1,981 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Volume Taper Simulator</title>
+  <style>
+    /* ── Reset & Base ─────────────────────────────── */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #0f1117;
+      --bg2: #181c27;
+      --bg3: #1e2235;
+      --border: rgba(255, 255, 255, 0.10);
+      --text: #dde1ed;
+      --text2: #9ca3b5;
+      --text3: #6b7280;
+      --accent: #4f8ef7;
+      --accent2: #e0534a;
+      --radius: 10px;
+      --gap: 10px;
+      --font: 'Courier New', monospace;
+    }
+
+    html,
+    body {
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 13px;
+    }
+
+    /* ── Layout ───────────────────────────────────── */
+    .app {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      grid-template-rows: 1fr;
+      gap: var(--gap);
+      height: 100vh;
+      padding: var(--gap);
+      padding-bottom: 28px;
+      /* space for footer */
+      position: relative;
+    }
+
+    .col-left {
+      display: flex;
+      flex-direction: column;
+      gap: var(--gap);
+      min-height: 0;
+      overflow-y: auto;
+    }
+
+    .col-right {
+      display: grid;
+      grid-template-rows: 1fr 1fr;
+      gap: var(--gap);
+      min-height: 0;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 185px 1fr;
+      gap: var(--gap);
+      min-height: 0;
+    }
+
+    footer {
+      position: fixed;
+      bottom: 6px;
+      right: 14px;
+      font-size: 11px;
+      color: var(--text3);
+    }
+
+    /* ── Card ─────────────────────────────────────── */
+    .card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      /* min-height: 0; */
+      /* overflow: auto; */
+    }
+
+    .card-title {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--text2);
+      margin-bottom: 7px;
+      flex-shrink: 0;
+    }
+
+    /* ── Form controls ────────────────────────────── */
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      margin-bottom: 6px;
+    }
+
+    .field:last-of-type {
+      margin-bottom: 0;
+    }
+
+    label {
+      font-size: 11px;
+      color: var(--text2);
+      margin-top: 10px;
+    }
+
+    .input-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .input-row label {
+      margin: 0;
+    }
+
+    input[type=number] {
+      flex: 1;
+      min-width: 0;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      padding: 5px 8px;
+      font-family: var(--font);
+      font-size: 13px;
+      outline: none;
+    }
+
+    input[type=number]:focus {
+      border-color: var(--accent);
+    }
+
+    .unit {
+      font-size: 11px;
+      color: var(--text2);
+      min-width: 24px;
+    }
+
+    input[type=range] {
+      flex: 1;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .slider-val {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      min-width: 40px;
+      text-align: right;
+    }
+
+    /* ── Scheme placeholder ───────────────────────── */
+    .scheme {
+      flex: 1;
+      background: var(--bg3);
+      border: 1px dashed var(--border);
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 120px;
+      overflow: hidden;
+    }
+
+    .scheme span {
+      font-size: 11px;
+      color: var(--text3);
+    }
+
+    .scheme img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    /* ── Metric chips ─────────────────────────────── */
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .metric {
+      background: var(--bg3);
+      border-radius: 8px;
+      padding: 6px 8px;
+      border: 1px solid var(--border);
+    }
+
+    .metric-label {
+      font-size: 10px;
+      color: var(--text3);
+      margin-bottom: 2px;
+    }
+
+    .metric-value {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1;
+    }
+
+    .metric-sub {
+      font-size: 10px;
+      color: var(--text3);
+      margin-top: 2px;
+    }
+
+    /* ── Knob ─────────────────────────────────────── */
+    .knob-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    /* ── Loudness meter ───────────────────────────── */
+    .meter-pair {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .meter-col {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .meter-label-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      flex-shrink: 0;
+    }
+
+    .meter-tag {
+      font-size: 10px;
+      color: var(--text2);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    .meter-db {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .meter-canvas-wrap {
+      flex: 1;
+      min-height: 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .meter-canvas-wrap canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    /* ── Chart legend ─────────────────────────────── */
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      flex-shrink: 0;
+      margin-bottom: 6px;
+      font-size: 11px;
+      color: var(--text2);
+    }
+
+    .legend span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .ld {
+      width: 18px;
+      height: 2px;
+      border-radius: 1px;
+      display: inline-block;
+    }
+
+    /* ── Chart notice ─────────────────────────────── */
+    .notice {
+      font-size: 10px;
+      color: var(--text2);
+      margin-bottom: 6px;
+      flex-shrink: 0;
+      line-height: 1.4;
+    }
+
+    /* ── Signal header ────────────────────────────── */
+    .sig-hdr {
+      display: flex;
+      justify-content: flex-end;
+      font-size: 11px;
+      color: var(--text2);
+      margin-bottom: 4px;
+      flex-shrink: 0;
+    }
+
+    /* ── Canvas wrapper ───────────────────────────── */
+    .chart-wrap {
+      flex: 1;
+      min-height: 0;
+      position: relative;
+    }
+
+    .chart-wrap canvas {
+      position: absolute;
+      inset: 0;
+    }
+
+    /* ── Scrollbar ────────────────────────────────── */
+    .col-left::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .col-left::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 2px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+
+    <!-- ═══ LEFT COLUMN ═══════════════════════════════ -->
+    <div class="col-left">
+
+      <!-- Circuit diagram -->
+      <div class="card">
+        <div class="card-title">Circuit Diagram</div>
+        <div class="scheme">
+          <img alt="circuit schematic" src="./circuit.jpg"
+            onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" />
+          <span style="display:none">← place schematic here →</span>
+        </div>
+      </div>
+
+      <!-- Circuit parameters -->
+      <div class="card">
+        <div class="card-title">Circuit Parameters</div>
+
+        <div class="field">
+          <label>Potentiometer RP1</label>
+          <div class="input-row">
+            <input type="number" id="rp" value="50" min="5" max="500" step="5">
+            <span class="unit">kΩ</span>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Max Output Loudness</label>
+          <div class="slider-row">
+            <input type="range" id="maxLoud" min="0" max="100" value="100" step="1">
+            <span class="slider-val" id="maxLoudVal">100%</span>
+          </div>
+          <div class="input-row" style="margin-top:4px">
+            <label style="white-space:nowrap">R1 (loudness)</label>
+            <input type="number" id="r1" value="0" min="0" max="99999" step="1">
+            <span class="unit">kΩ</span>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Shunt R2 (curve shape)</label>
+          <div class="input-row">
+            <input type="number" id="r2" value="10" min="0.01" max="999" step="1">
+            <span class="unit">kΩ</span>
+          </div>
+          <div class="slider-row">
+            <input type="range" id="r2Slider" min="0.01" max="999" value="10" step="1">
+          </div>
+        </div>
+      </div>
+
+      <!-- Knob position -->
+      <div class="card">
+        <div class="card-title">Knob Position</div>
+        <div class="slider-row" style="margin-bottom:10px">
+          <input type="range" id="pos" min="0" max="100" value="50" step="1">
+          <!-- <span class="slider-val" id="posVal">50%</span> -->
+        </div>
+        <div class="knob-wrap">
+          <audio-knob id="knobEl" value="50" size="150"></audio-knob>
+        </div>
+      </div>
+
+    </div><!-- /col-left -->
+
+    <!-- ═══ RIGHT COLUMN ══════════════════════════════ -->
+    <div class="col-right">
+
+      <!-- Row 1: Signal + Amplitude chart -->
+      <div class="row">
+
+        <div class="card">
+          <div class="card-title">Output Signal</div>
+          <div class="sig-hdr"><span id="sigOutLbl">Output: —%</span></div>
+          <div class="chart-wrap">
+            <canvas id="signalChart" aria-label="Input and output waveforms"></canvas>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Amplitude @ Knob Position</div>
+          <div class="notice">All reference curves are normalized to meet the actual circuit curve at 100%.</div>
+          <div class="legend">
+            <span><span class="ld" style="background:#888;opacity:.7"></span>Logarithmic</span>
+            <span><span class="ld" style="background:#59A14F"></span>Audio taper a=1</span>
+            <span><span class="ld" style="background:#F28E2B"></span>Audio taper a=2</span>
+            <span><span class="ld" style="background:#E15759"></span>Linear</span>
+            <span><span class="ld" style="background:#4f8ef7"></span>This circuit</span>
+            <span style="align-items:center">
+              <span
+                style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#e0534a;margin-right:4px"></span>Position
+            </span>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="amplitudeChart" aria-label="Amplitude vs knob position"></canvas>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Row 2: Loudness meters + Loudness chart -->
+      <div class="row">
+
+        <div class="card">
+          <div class="card-title">Level Meters</div>
+          <div class="meter-pair">
+            <div class="meter-col">
+              <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;margin-bottom:4px">
+                <span class="meter-tag">Input</span>
+                <span class="meter-db" id="dbInMeter">—</span>
+                <span style="font-size:9px;color:var(--text3)">dB</span>
+              </div>
+              <div class="meter-canvas-wrap">
+                <canvas id="loudnessMeterIn"></canvas>
+              </div>
+            </div>
+            <div class="meter-col">
+              <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;margin-bottom:4px">
+                <span class="meter-tag">Output</span>
+                <span class="meter-db" id="dbOutMeter">—</span>
+                <span style="font-size:9px;color:var(--text3)">dB re max</span>
+              </div>
+              <div class="meter-canvas-wrap">
+                <canvas id="loudnessMeterOut"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Loudness @ Knob Position</div>
+          <div class="notice">Same normalization as amplitude chart. Loudness ≈ amplitude^0.6 (Stevens' power law).
+          </div>
+          <div class="legend">
+            <span><span class="ld" style="background:#888;opacity:.7"></span>Logarithmic</span>
+            <span><span class="ld" style="background:#59A14F"></span>Audio taper a=1</span>
+            <span><span class="ld" style="background:#F28E2B"></span>Audio taper a=2</span>
+            <span><span class="ld" style="background:#E15759"></span>Linear</span>
+            <span><span class="ld" style="background:#4f8ef7"></span>This circuit</span>
+            <span style="align-items:center">
+              <span
+                style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#e0534a;margin-right:4px"></span>Position
+            </span>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="loudnessChart" aria-label="Perceived loudness vs knob position"></canvas>
+          </div>
+        </div>
+
+      </div>
+
+    </div><!-- /col-right -->
+
+    <footer>Copyright © Oleksii Sylichenko, 2026</footer>
+
+  </div><!-- /app -->
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <script>
+    /* ═══════════════════════════════════════════════════
+       CONSTANTS
+    ═══════════════════════════════════════════════════ */
+    const DB_MIN = -40;
+
+    const COLOR = {
+      std: '#888',
+      taper1: '#59A14F',
+      taper2: '#F28E2B',
+      linear: '#E15759',
+      actual: '#4f8ef7',
+      knob: '#e0534a',
+    };
+
+    const DSI = { knob: 0, actual: 1, std: 2, taper1: 3, taper2: 4, linear: 5 };
+
+    const X_VALUES = Array.from({ length: 101 }, (_, i) => i);
+
+    /* ═══════════════════════════════════════════════════
+       AUDIO-KNOB CUSTOM ELEMENT
+    ═══════════════════════════════════════════════════ */
+    class AudioKnob extends HTMLElement {
+      connectedCallback() {
+        const size = Number(this.getAttribute('size') || 200);
+        const value = Number(this.getAttribute('value') || 50);
+        this.attachShadow({ mode: 'open' });
+        this._size = size;
+        this._render(size);
+        this.setValue(value, false);
+        this._addEvents();
+      }
+
+      _render(size) {
+        const fs = (size * 24 / 260).toFixed();
+        this.shadowRoot.innerHTML = `
+        <style>
+          :host { display:inline-block; width:${size}px; height:${size}px; user-select:none; }
+          .wrap { position:relative; width:100%; height:100%; }
+          svg   { position:absolute; inset:0; }
+          .knob { position:absolute; left:50%; top:50%; width:54%; height:54%;
+                  transform:translate(-50%,-50%); border-radius:50%;
+                  background:radial-gradient(circle at 30% 30%, #555, #1a1a1a);
+                  box-shadow: inset 0 2px 6px rgba(255,255,255,.12), 0 4px 14px rgba(0,0,0,.7);
+                  cursor:grab; }
+          .knob:active { cursor:grabbing; }
+          .rotor  { position:absolute; inset:0; }
+          .marker { position:absolute; left:50%; top:10%; width:6%; height:20%;
+                    transform:translateX(-50%); background:#fff; border-radius:4px;
+                    box-shadow:0 0 6px rgba(255,255,255,.5); }
+          .val    { position:absolute; bottom:5px; width:100%; text-align:center;
+                    font-size:${fs}px; font-family:'Courier New',monospace;
+                    color:#8b90a0; font-weight:700; }
+        </style>
+        <div class="wrap">
+          <svg viewBox="0 0 ${size} ${size}" id="svg"></svg>
+          <div class="knob"><div class="rotor"><div class="marker"></div></div></div>
+          <div class="val">50</div>
+        </div>`;
+
+        this._rotor = this.shadowRoot.querySelector('.rotor');
+        this._label = this.shadowRoot.querySelector('.val');
+        this._knob = this.shadowRoot.querySelector('.knob');
+        this._drawScale(this.shadowRoot.querySelector('#svg'), size);
+      }
+
+      _drawScale(svg, size) {
+        const cx = size / 2, r = size * 0.42;
+        for (let i = 0; i <= 100; i++) {
+          const deg = -135 + 270 * i / 100 - 90;
+          const rad = deg * Math.PI / 180;
+          const major = i % 10 === 0;
+          const r1 = r - (major ? 18 : 10), r2 = r;
+          const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          line.setAttribute('x1', cx + Math.cos(rad) * r1);
+          line.setAttribute('y1', cx + Math.sin(rad) * r1);
+          line.setAttribute('x2', cx + Math.cos(rad) * r2);
+          line.setAttribute('y2', cx + Math.sin(rad) * r2);
+          line.setAttribute('stroke', major ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.1)');
+          line.setAttribute('stroke-width', major ? '2' : '1');
+          svg.appendChild(line);
+        }
+      }
+
+      setValue(val, emit = true) {
+        this.value = Math.max(0, Math.min(100, Math.round(val)));
+        this._label.textContent = this.value;
+        this._rotor.style.transform = `rotate(${-135 + this.value / 100 * 270}deg)`;
+        if (emit) this.dispatchEvent(new CustomEvent('change', { detail: { value: this.value }, bubbles: true, composed: true }));
+      }
+
+      _addEvents() {
+        let dragging = false;
+        this.shadowRoot.addEventListener('mousedown', () => { dragging = true; });
+        window.addEventListener('mouseup', () => { dragging = false; });
+        window.addEventListener('mousemove', (e) => {
+          if (!dragging) return;
+          const r = this.getBoundingClientRect();
+          let angle = Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2)) * 180 / Math.PI + 90;
+          if (angle > 180) angle -= 360;
+          const v = ((Math.max(-135, Math.min(135, angle)) + 135) / 270) * 100;
+          syncKnob(v);
+        });
+        this._knob.addEventListener('wheel', (e) => {
+          e.preventDefault();
+          syncKnob(getPos() + (e.deltaY < 0 ? 1 : -1) * 5);
+        });
+      }
+    }
+    customElements.define('audio-knob', AudioKnob);
+
+    /* ═══════════════════════════════════════════════════
+       STATE HELPERS
+    ═══════════════════════════════════════════════════ */
+    const $ = id => document.getElementById(id);
+
+    function getConfig() {
+      return {
+        r1: (__r1 / 1000) || 0,
+        rp: parseFloat($('rp').value) || 50,
+        r2: parseFloat($('r2').value) || 10,
+        pos: parseInt($('pos').value, 10),
+        maxLoud: (parseFloat($('maxLoud').value) || 0) / 100,
+      };
+    }
+
+    function getPos() { return parseInt($('pos').value, 10); }
+
+    let __r1 = 0;
+
+    /* ═══════════════════════════════════════════════════
+       PHYSICS
+    ═══════════════════════════════════════════════════ */
+    function calcAmplitude(config, knobFrac) {
+      const r1 = config.r1 * 1e3, rp = config.rp * 1e3, r2 = config.r2 * 1e3;
+      const rpBot = rp * knobFrac;
+      const rpTop = rp - rpBot;
+      const rTop = r1 + rpTop;
+      const rBot = rpBot <= 0 ? 0 : 1 / (1 / rpBot + 1 / r2);
+      const rFull = rBot + rTop;
+      return rFull <= 0 ? 0 : rBot / rFull;
+    }
+
+    function calcR1(amplitude, config) {
+      const rp = config.rp * 1e3, r2 = config.r2 * 1e3;
+      const rBot = 1 / (1 / rp + 1 / r2);
+      return Math.min(rBot * (1 / amplitude - 1), 99999e3);
+    }
+
+    /* loudness ≈ A^0.602 (Stevens' power law for pure tones) */
+    const LOUD_EXP = 2 * Math.log10(2); // ≈ 0.602
+    const amplToLoudness = a => Math.pow(a, LOUD_EXP);
+    const loudnessToAmpl = l => Math.pow(10, Math.log2(l) / 2);
+    const amplToDb = a => a <= 0 ? DB_MIN : Math.max(20 * Math.log10(a), DB_MIN);
+
+    function buildAmplitudeCurves(config) {
+      const atten = calcAmplitude(config, 1);
+      const att = a => a * atten;
+      const xf = X_VALUES.map(x => x / 100);
+
+      return {
+        linear: xf.map(x => att(x)),
+        std: xf.map(x => att(x <= 0 ? 0 : Math.pow(10, Math.log2(x) / 2))),
+        taper1: xf.map(x => att(x <= 0 ? 0 : (Math.pow(10, x) - 1) / 9)),
+        taper2: xf.map(x => att(x <= 0 ? 0 : (Math.pow(100, x) - 1) / 99)),
+        real: xf.map(x => calcAmplitude(config, x)),
+      };
+    }
+
+    /* ═══════════════════════════════════════════════════
+       CHART HELPERS
+    ═══════════════════════════════════════════════════ */
+    const CHART_DEFAULTS = {
+      responsive: true, maintainAspectRatio: false,
+      animation: { duration: 0 },
+      plugins: { legend: { display: false } },
+    };
+
+    const CHART_GRID_COLOR = 'rgba(255,255,255,0.14)';
+
+    const CURVE_AXIS_SCALES = {
+      x: {
+        type: 'linear', min: 0, max: 100,
+        title: { display: true, text: 'Knob position, %', font: { size: 11 }, color: '#7a8099' },
+        ticks: { stepSize: 10, color: '#7a8099', callback: v => v + '%' },
+        grid: { color: CHART_GRID_COLOR }
+      },
+      y: {
+        type: 'linear', min: 0, max: 100,
+        title: { display: true, text: 'Level, %', font: { size: 11 }, color: '#7a8099' },
+        ticks: { stepSize: 10, color: '#7a8099' },
+        grid: { color: CHART_GRID_COLOR }
+      },
+    };
+
+    function createCurveDatasets() {
+      const ds = [];
+      ds[DSI.knob] = { type: 'scatter', pointRadius: 7, pointBackgroundColor: COLOR.knob, pointBorderColor: '#fff', pointBorderWidth: 2, yAxisID: 'y' };
+      ds[DSI.std] = { type: 'line', borderColor: COLOR.std, borderWidth: 1.5, pointRadius: 0, borderDash: [12, 6], tension: 0, yAxisID: 'y' };
+      ds[DSI.linear] = { type: 'line', borderColor: COLOR.linear, borderWidth: 1.5, pointRadius: 0, tension: 0.15, yAxisID: 'y' };
+      ds[DSI.taper1] = { type: 'line', borderColor: COLOR.taper1, borderWidth: 1.5, pointRadius: 0, tension: 0.15, yAxisID: 'y' };
+      ds[DSI.taper2] = { type: 'line', borderColor: COLOR.taper2, borderWidth: 1.5, pointRadius: 0, tension: 0.15, yAxisID: 'y' };
+      ds[DSI.actual] = { type: 'line', borderColor: COLOR.actual, borderWidth: 2.5, pointRadius: 0, tension: 0.2, yAxisID: 'y' };
+      return ds;
+    }
+
+    function updateCurveChart(chart, curves, knobX, knobY) {
+      const pct = v => v * 100;
+      chart.data.datasets[DSI.knob].data = [{ x: knobX, y: knobY }];
+      chart.data.datasets[DSI.actual].data = curves.real.map(pct);
+      chart.data.datasets[DSI.std].data = curves.std.map(pct);
+      chart.data.datasets[DSI.taper1].data = curves.taper1.map(pct);
+      chart.data.datasets[DSI.taper2].data = curves.taper2.map(pct);
+      chart.data.datasets[DSI.linear].data = curves.linear.map(pct);
+      chart.update('none');
+    }
+
+    /* ═══════════════════════════════════════════════════
+       CHART INIT
+    ═══════════════════════════════════════════════════ */
+    let amplitudeChart, loudnessChart, signalChart, meterIn, meterOut;
+
+    function initAmplitudeChart() {
+      amplitudeChart = new Chart($('amplitudeChart'), {
+        data: { labels: X_VALUES, datasets: createCurveDatasets() },
+        options: {
+          ...CHART_DEFAULTS,
+          plugins: {
+            ...CHART_DEFAULTS.plugins,
+            tooltip: {
+              callbacks: {
+                title: ctx => `Knob: ${ctx[0].parsed.x.toFixed()}%`,
+                label: ctx => ` Amplitude: ${ctx.parsed.y.toFixed()}%`
+              }
+            }
+          },
+          scales: CURVE_AXIS_SCALES
+        },
+      });
+    }
+
+    function initLoudnessChart() {
+      loudnessChart = new Chart($('loudnessChart'), {
+        data: { labels: X_VALUES, datasets: createCurveDatasets() },
+        options: {
+          ...CHART_DEFAULTS,
+          scales: {
+            ...CURVE_AXIS_SCALES,
+            y: { ...CURVE_AXIS_SCALES.y, title: { display: true, text: 'Loudness, %', font: { size: 11 }, color: '#7a8099' } }
+          },
+          plugins: {
+            ...CHART_DEFAULTS.plugins,
+            tooltip: {
+              callbacks: {
+                title: ctx => `Knob: ${ctx[0].parsed.x.toFixed()}%`,
+                label: ctx => ` Loudness: ${ctx.parsed.y.toFixed()}%`
+              }
+            }
+          }
+        },
+      });
+    }
+
+    const SIG_PTS = 80, SIG_PERIODS = 0.51;
+    function initSignalChart() {
+      const labels = Array.from({ length: SIG_PTS }, (_, i) => i / SIG_PTS * SIG_PERIODS);
+      signalChart = new Chart($('signalChart'), {
+        type: 'line',
+        data: {
+          labels, datasets: [
+            { borderColor: '#555', borderWidth: 1.5, pointRadius: 0, tension: 0 },
+            { borderColor: COLOR.actual, borderWidth: 2, pointRadius: 0, tension: 0 },
+          ]
+        },
+        options: {
+          ...CHART_DEFAULTS,
+          plugins: { legend: { display: false }, tooltip: { enabled: false } },
+          scales: {
+            x: { ticks: { display: false } },
+            y: {
+              min: 0, max: 100,
+              title: { display: true, text: 'Amplitude, %', font: { size: 11 }, color: '#7a8099' },
+              ticks: { stepSize: 10, color: '#7a8099' }, grid: { color: CHART_GRID_COLOR }
+            },
+          }
+        }
+      });
+    }
+
+    function initMeter(canvasId) {
+      const ctx = $(canvasId).getContext('2d');
+      const grad = ctx.createLinearGradient(0, 300, 0, 0);
+      grad.addColorStop(0, '#00c853');
+      grad.addColorStop(0.65, '#ffd600');
+      grad.addColorStop(1, '#ff1744');
+      return new Chart($(canvasId), {
+        type: 'bar',
+        data: { labels: [''], datasets: [{ data: [0], backgroundColor: grad, borderWidth: 0, barPercentage: 1, categoryPercentage: 1 }] },
+        options: {
+          ...CHART_DEFAULTS,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: ctx => {
+                  const real = ctx.parsed.y + DB_MIN;
+                  return real <= DB_MIN ? ' -inf dB' : ` ${real.toFixed(1)} dB`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: { display: false },
+            y: {
+              min: 0, max: Math.abs(DB_MIN),
+              ticks: { color: '#7a8099', font: { size: 10 }, callback: v => v === 0 ? '-inf' : (v + DB_MIN).toFixed(0) },
+              grid: { color: CHART_GRID_COLOR }
+            }
+          }
+        }
+      });
+    }
+
+    /* ═══════════════════════════════════════════════════
+       SIGNAL HELPER
+    ═══════════════════════════════════════════════════ */
+    function makeSineData(amplitude) {
+      return Array.from({ length: SIG_PTS }, (_, i) => Math.abs(amplitude * Math.sin(2 * Math.PI * SIG_PERIODS * i / SIG_PTS)));
+    }
+
+    /* ═══════════════════════════════════════════════════
+       UPDATE
+    ═══════════════════════════════════════════════════ */
+    let maxDesiredAmplitude = 1;
+
+    function update() {
+      const cfg = getConfig();
+
+      $('maxLoudVal').textContent = (cfg.maxLoud * 100).toFixed(0) + '%';
+
+      const ampl = calcAmplitude(cfg, cfg.pos / 100);
+      maxDesiredAmplitude = loudnessToAmpl(cfg.maxLoud);
+
+      const dbIn = amplToDb(ampl);
+      const dbOut = amplToDb(maxDesiredAmplitude > 0 ? ampl / maxDesiredAmplitude : 0);
+
+      const fmtDb = v => v <= DB_MIN ? '-inf' : v.toFixed(1);
+
+      $('dbInMeter').textContent = fmtDb(dbIn);
+      $('dbOutMeter').textContent = fmtDb(dbOut);
+      $('sigOutLbl').textContent = `Output: ${(ampl * 100).toFixed(1)}%`;
+
+      if (!amplitudeChart) return;
+
+      /* amplitude curves */
+      const ac = buildAmplitudeCurves(cfg);
+      updateCurveChart(amplitudeChart, ac, cfg.pos, ampl * 100);
+
+      /* loudness curves */
+      const lc = {
+        real: ac.real.map(amplToLoudness),
+        std: ac.std.map(amplToLoudness),
+        taper1: ac.taper1.map(amplToLoudness),
+        taper2: ac.taper2.map(amplToLoudness),
+        linear: ac.linear.map(amplToLoudness),
+      };
+      updateCurveChart(loudnessChart, lc, cfg.pos, amplToLoudness(ampl) * 100);
+
+      /* signal */
+      signalChart.data.datasets[0].data = makeSineData(100);
+      signalChart.data.datasets[1].data = makeSineData(ampl * 100);
+      signalChart.update('none');
+
+      /* meters */
+      meterIn.data.datasets[0].data[0] = dbIn + Math.abs(DB_MIN);
+      meterOut.data.datasets[0].data[0] = dbOut + Math.abs(DB_MIN);
+      meterIn.update('none');
+      meterOut.update('none');
+    }
+
+    /* ═══════════════════════════════════════════════════
+       KNOB SYNC
+    ═══════════════════════════════════════════════════ */
+    function syncKnob(val) {
+      val = Math.max(0, Math.min(100, Math.round(val)));
+      $('pos').value = val;
+      $('knobEl').setValue(val, false);
+      update();
+    }
+
+    /* ═══════════════════════════════════════════════════
+       AUTO R1 from maxLoud
+    ═══════════════════════════════════════════════════ */
+    function applyMaxLoud() {
+      const cfg = getConfig();
+      const ampl = loudnessToAmpl(cfg.maxLoud);
+      __r1 = calcR1(ampl, cfg);
+      $('r1').value = (Math.round(__r1) / 1000).toFixed(3);
+      update();
+    }
+
+    /* ═══════════════════════════════════════════════════
+       EVENT LISTENERS
+    ═══════════════════════════════════════════════════ */
+    $('rp').addEventListener('input', update);
+
+    $('r1').addEventListener('input', () => {
+      __r1 = (parseFloat($('r1').value) || 0) * 1e3;
+      update();
+    });
+
+    $('r2').addEventListener('input', () => {
+      const min = +$('r2Slider').min, max = +$('r2Slider').max;
+      
+      const value = Math.min(max, Math.max(min, parseFloat($('r2').value)));
+
+      const t = Math.log(value / min) / Math.log(max / min);
+      $('r2Slider').value = Math.round(t * 1000);
+
+      applyMaxLoud();
+      update();
+    });
+
+    $('r2Slider').addEventListener('input', () => {
+      const min = +$('r2Slider').min, max = +$('r2Slider').max;
+      $('r2').value = (min * Math.pow(max / min, +$('r2Slider').value / 1000)).toFixed(3);
+
+      applyMaxLoud();
+      update();
+    });
+
+    $('maxLoud').addEventListener('input', applyMaxLoud);
+
+    $('pos').addEventListener('input', () => syncKnob(getPos()));
+
+    document.querySelector('audio-knob').addEventListener('change', e => {
+      $('pos').value = e.detail.value;
+      update();
+    });
+
+    /* ═══════════════════════════════════════════════════
+       INIT
+    ═══════════════════════════════════════════════════ */
+    window.addEventListener('load', () => {
+      initSignalChart();
+      initAmplitudeChart();
+      initLoudnessChart();
+      meterIn = initMeter('loudnessMeterIn');
+      meterOut = initMeter('loudnessMeterOut');
+      applyMaxLoud();
+    });
+  </script>
+</body>
+
+</html>
