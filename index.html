@@ -21,7 +21,7 @@
       --bg3: #1e2235;
       --border: rgba(255, 255, 255, 0.10);
       --text: #dde1ed;
-      --text2: #9ca3b5;
+      --text2: #92a3cf;
       --text3: #6b7280;
       --accent: #4f8ef7;
       --accent2: #e0534a;
@@ -43,7 +43,7 @@
     /* ── Layout ───────────────────────────────────── */
     .app {
       display: grid;
-      grid-template-columns: 260px 1fr;
+      grid-template-columns: 280px 1fr;
       grid-template-rows: 1fr;
       gap: var(--gap);
       height: 100vh;
@@ -66,13 +66,14 @@
       grid-template-rows: 1fr 1fr;
       gap: var(--gap);
       min-height: 0;
+      overflow-y: auto;
     }
 
     .row {
       display: grid;
       grid-template-columns: 185px 1fr;
       gap: var(--gap);
-      min-height: 0;
+      min-height: 360px;
     }
 
     footer {
@@ -96,8 +97,8 @@
     }
 
     .card-title {
-      font-size: 10px;
-      font-weight: 700;
+      font-size: 13px;
+      font-weight: 600;
       letter-spacing: .1em;
       text-transform: uppercase;
       color: var(--text2);
@@ -131,11 +132,12 @@
 
     .input-row label {
       margin: 0;
+      flex: 1;
     }
 
     input[type=number] {
-      flex: 1;
-      min-width: 0;
+      flex: none;
+      width: 100px;
       background: var(--bg3);
       border: 1px solid var(--border);
       border-radius: 6px;
@@ -144,6 +146,7 @@
       font-family: var(--font);
       font-size: 13px;
       outline: none;
+      text-align: right;
     }
 
     input[type=number]:focus {
@@ -154,6 +157,7 @@
       font-size: 11px;
       color: var(--text2);
       min-width: 24px;
+      flex: none;
     }
 
     input[type=range] {
@@ -323,7 +327,7 @@
 
     /* ── Chart notice ─────────────────────────────── */
     .notice {
-      font-size: 10px;
+      font-size: 12px;
       color: var(--text2);
       margin-bottom: 6px;
       flex-shrink: 0;
@@ -385,9 +389,10 @@
         <div class="card-title">Circuit Parameters</div>
 
         <div class="field">
-          <label>Potentiometer RP1</label>
+
           <div class="input-row">
-            <input type="number" id="rp" value="50" min="5" max="500" step="5">
+            <label>Potentiometer RP1</label>
+            <input type="number" dir="rtl" id="rp" value="50" min="5" max="500" step="5">
             <span class="unit">kΩ</span>
           </div>
         </div>
@@ -400,15 +405,16 @@
           </div>
           <div class="input-row" style="margin-top:4px">
             <label style="white-space:nowrap">R1 (loudness)</label>
-            <input type="number" id="r1" value="0" min="0" max="99999" step="1">
+            <input type="number" dir="rtl" id="r1" value="0" min="0" max="99999" step="1">
             <span class="unit">kΩ</span>
           </div>
         </div>
 
         <div class="field">
-          <label>Shunt R2 (curve shape)</label>
+
           <div class="input-row">
-            <input type="number" id="r2" value="10" min="0.01" max="999" step="1">
+            <label>R2 (shape)</label>
+            <input type="number" dir="rtl" id="r2" value="10" min="0.01" max="999" step="1">
             <span class="unit">kΩ</span>
           </div>
           <div class="slider-row">
@@ -937,7 +943,7 @@
 
     $('r2').addEventListener('input', () => {
       const min = +$('r2Slider').min, max = +$('r2Slider').max;
-      
+
       const value = Math.min(max, Math.max(min, parseFloat($('r2').value)));
 
       const t = Math.log(value / min) / Math.log(max / min);
