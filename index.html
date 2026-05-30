@@ -876,7 +876,7 @@
       const dbIn = amplToDb(ampl);
       const dbOut = amplToDb(maxDesiredAmplitude > 0 ? ampl / maxDesiredAmplitude : 0);
 
-      const fmtDb = v => v <= DB_MIN ? '-inf' : v.toFixed(1);
+      const fmtDb = v => v <= DB_MIN ? '-inf' : (Math.round(v * 10) / 10).toFixed(1);
 
       $('dbInMeter').textContent = fmtDb(dbIn);
       $('dbOutMeter').textContent = fmtDb(dbOut);
