@@ -871,10 +871,11 @@
       $('maxLoudVal').textContent = (cfg.maxLoud * 100).toFixed(0) + '%';
 
       const ampl = calcAmplitude(cfg, cfg.pos / 100);
-      maxDesiredAmplitude = loudnessToAmpl(cfg.maxLoud);
+      maxDesiredAmplitude = calcAmplitude(cfg, 1); // changing of cfg.maxLoud causes changing of cfg. see applyMaxLoud()
+      const relativeAmplitude = maxDesiredAmplitude > 0 ? (ampl / maxDesiredAmplitude) : 0;
 
       const dbIn = amplToDb(ampl);
-      const dbOut = amplToDb(maxDesiredAmplitude > 0 ? ampl / maxDesiredAmplitude : 0);
+      const dbOut = amplToDb(relativeAmplitude);
 
       const fmtDb = v => v <= DB_MIN ? '-inf' : (Math.round(v * 10) / 10).toFixed(1);
 
@@ -938,6 +939,9 @@
 
     $('r1').addEventListener('input', () => {
       __r1 = (parseFloat($('r1').value) || 0) * 1e3;
+      const cfg = getConfig();
+      const maxAmpl = calcAmplitude(cfg, 1);
+      $('maxLoud').value = amplToLoudness(maxAmpl) * 100;
       update();
     });
 
